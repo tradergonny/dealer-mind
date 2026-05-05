@@ -4,9 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="DEALER MIND">
-<title>DEALER MIND</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="딜러마인드">
+<meta name="theme-color" content="#07070f">
+<link rel="manifest" id="pwa-manifest">
+<link rel="apple-touch-icon" id="pwa-icon">
+<title>딜러마인드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -192,6 +195,40 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 .step-num{width:20px;height:20px;border-radius:50%;background:var(--acc2);border:1px solid var(--acc);color:var(--acc);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .step-lbl{font-size:11px;color:var(--t2);font-family:var(--sans)}
 
+/* DIFFERENT THIS TIME BLOCKER */
+.dtt-section{display:none;background:var(--red3);border:1px solid var(--red2);border-left:3px solid var(--red);border-radius:10px;padding:14px;margin-bottom:14px}
+.dtt-section.show{display:block}
+.dtt-ttl{font-size:12px;color:var(--red);margin-bottom:10px;letter-spacing:1px;font-weight:700}
+.dtt-q{font-size:14px;color:var(--t1);font-family:var(--sans);margin-bottom:10px;line-height:1.6}
+.dtt-options{display:grid;gap:6px}
+.dtt-opt{background:var(--bg3);border:1px solid var(--b1);color:var(--t2);padding:10px 12px;border-radius:8px;font-size:13px;cursor:pointer;text-align:left;font-family:var(--sans);line-height:1.5;transition:.15s}
+.dtt-opt:active{transform:scale(.98)}
+.dtt-opt.on{background:var(--red2);border-color:var(--red);color:var(--red)}
+.dtt-msg{font-size:12px;color:var(--t2);margin-top:10px;font-family:var(--sans);line-height:1.7;padding:10px;background:rgba(0,0,0,.3);border-radius:6px;display:none}
+.dtt-msg.show{display:block}
+
+/* TRIGGER BUTTON */
+.dtt-trigger{background:var(--red3);border:1px solid var(--red2);color:var(--red);padding:10px 14px;border-radius:10px;font-size:12px;cursor:pointer;width:100%;font-family:var(--sans);margin-bottom:14px;text-align:center;line-height:1.5}
+.dtt-trigger:active{transform:scale(.98)}
+
+/* BET SIZE SLIDER */
+.bet-wrap{margin-bottom:14px}
+.bet-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bet-input{flex:1;background:var(--bg3);border:2px solid var(--b2);border-radius:10px;color:var(--t1);padding:12px;font-size:20px;font-weight:700;text-align:center;font-family:var(--mono);transition:.2s}
+.bet-input:focus{outline:none}
+.bet-input.low{border-color:var(--red);color:var(--red);background:var(--red3)}
+.bet-input.mid{border-color:var(--amb);color:var(--amb);background:var(--amb3)}
+.bet-input.full{border-color:var(--grn);color:var(--grn);background:var(--grn3)}
+.bet-input.over{border-color:var(--grn);color:var(--grn);background:var(--grn3)}
+.bet-unit{font-size:14px;color:var(--t3)}
+.bet-quick{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.bet-q{background:var(--bg3);border:1px solid var(--b1);color:var(--t3);padding:8px 4px;border-radius:6px;font-size:11px;cursor:pointer;font-family:var(--mono);text-align:center}
+.bet-q:active{transform:scale(.93)}
+.bet-q.on{background:var(--acc2);border-color:var(--acc);color:var(--acc)}
+.bet-msg{font-size:11px;color:var(--t3);margin-top:6px;font-family:var(--sans);line-height:1.5;text-align:center}
+.bet-msg.fear{color:var(--red)}
+.bet-msg.ok{color:var(--grn)}
+
 /* TICKER BIG */
 .ticker-big{width:100%;background:var(--bg3);border:1px solid var(--b1);border-radius:10px;color:var(--t1);padding:13px 14px;font-size:20px;font-weight:700;font-family:var(--mono);letter-spacing:2px;transition:.15s;margin-bottom:14px}
 .ticker-big:focus{border-color:var(--acc);outline:none}
@@ -249,6 +286,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
         <div class="logo-sub">100번의 게임</div>
       </div>
       <div class="hdr-right">
+        <button class="btn-menu" onclick="openPreCheck()" style="background:var(--red3);border-color:var(--red2);color:var(--red);font-size:11px;font-family:'Noto Sans KR',sans-serif;padding:8px 10px">진입 전</button>
         <button class="btn-menu" onclick="openMenu()">☰</button>
         <button class="btn-add" onclick="openForm()">+ 추가</button>
       </div>
@@ -283,7 +321,23 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
     <div class="step-hd"><div class="step-num">2</div><div class="step-lbl">기법 선택</div></div>
     <div class="tech-grid-sel" id="tech-grid-sel"></div>
 
-    <div class="step-hd"><div class="step-num">3</div><div class="step-lbl">수익률</div></div>
+    <div class="step-hd"><div class="step-num">3</div><div class="step-lbl">배팅 비중 (가능액 대비 %)</div></div>
+    <div class="bet-wrap">
+      <div class="bet-row">
+        <input class="bet-input" type="number" id="f-betsize" placeholder="100" step="5" min="0" max="200" oninput="onBetInput(this)">
+        <span class="bet-unit">%</span>
+      </div>
+      <div class="bet-quick">
+        <div class="bet-q" onclick="setBet(25)">25%</div>
+        <div class="bet-q" onclick="setBet(50)">50%</div>
+        <div class="bet-q" onclick="setBet(100)">100%</div>
+        <div class="bet-q" onclick="setBet(150)">150%</div>
+        <div class="bet-q" onclick="setBet(200)">200%</div>
+      </div>
+      <div class="bet-msg" id="bet-msg">규칙대로면 100%. 무서워서 줄이고 있나요?</div>
+    </div>
+
+    <div class="step-hd"><div class="step-num">4</div><div class="step-lbl">수익률</div></div>
     <input class="result-big" type="number" id="f-result" placeholder="0.0" step="0.1" oninput="onResultInput(this)">
     <div class="sub-row">
       <div class="sub-field">
@@ -306,7 +360,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       </div>
     </div>
 
-    <div class="step-hd"><div class="step-num">4</div><div class="step-lbl">규칙 준수 체크</div></div>
+    <div class="step-hd"><div class="step-num">5</div><div class="step-lbl">규칙 준수 체크</div></div>
     <div id="rule-checks"></div>
 
     <div class="field" style="margin-top:12px"><label>📝 메모 (선택)</label><input class="fi" type="text" id="f-memo" placeholder="짧게만" autocomplete="off"></div>
@@ -342,6 +396,59 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
   </div>
 </div>
 
+
+<!-- PRE-TRADE CHECK OVERLAY -->
+<div class="overlay" id="precheck-ov" onclick="ovClick(event,'precheck-ov')">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="form-ttl" style="color:var(--red)">⚠ 진입 전 체크</div>
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--t2);font-family:var(--sans);line-height:1.7">
+      지금 매수 버튼 누르려고 하나요?<br>
+      <b style="color:var(--red)">3가지만 확인하고 누르세요.</b>
+    </div>
+
+    <div class="dtt-section show" id="q1">
+      <div class="dtt-ttl">Q1. 지금 이런 생각 들어요?</div>
+      <div class="dtt-options">
+        <div class="dtt-opt" onclick="selectDtt(1,'bad')">"이번엔 다를 것 같다"</div>
+        <div class="dtt-opt" onclick="selectDtt(1,'bad')">"이번엔 진짜 갈 것 같다"</div>
+        <div class="dtt-opt" onclick="selectDtt(1,'bad')">"평소랑 다른 특별한 자리다"</div>
+        <div class="dtt-opt" onclick="selectDtt(1,'bad')">"한 번만 더 들어가면..."</div>
+        <div class="dtt-opt" onclick="selectDtt(1,'good')">아니요. 그냥 평소처럼 신호 떴어요</div>
+      </div>
+      <div class="dtt-msg" id="msg1"></div>
+    </div>
+
+    <div class="dtt-section" id="q2">
+      <div class="dtt-ttl">Q2. 지금 매수 동기는?</div>
+      <div class="dtt-options">
+        <div class="dtt-opt" onclick="selectDtt(2,'bad')">아까 손실난 거 만회하고 싶어서</div>
+        <div class="dtt-opt" onclick="selectDtt(2,'bad')">방금 누가 자랑하는 거 봐서</div>
+        <div class="dtt-opt" onclick="selectDtt(2,'bad')">오늘 아직 매매 안 해서 답답해서</div>
+        <div class="dtt-opt" onclick="selectDtt(2,'bad')">놓치면 안 될 것 같아서</div>
+        <div class="dtt-opt" onclick="selectDtt(2,'good')">조건식 신호가 떴기 때문에</div>
+      </div>
+      <div class="dtt-msg" id="msg2"></div>
+    </div>
+
+    <div class="dtt-section" id="q3">
+      <div class="dtt-ttl">Q3. 매수 후 계획은?</div>
+      <div class="dtt-options">
+        <div class="dtt-opt" onclick="selectDtt(3,'bad')">상황 봐가면서 결정할 거예요</div>
+        <div class="dtt-opt" onclick="selectDtt(3,'bad')">일단 사고 흐름 보면서 팔거예요</div>
+        <div class="dtt-opt" onclick="selectDtt(3,'bad')">목표가 있긴 한데 바뀔 수도</div>
+        <div class="dtt-opt" onclick="selectDtt(3,'good')">지정가 걸고 화면 끌 거예요</div>
+      </div>
+      <div class="dtt-msg" id="msg3"></div>
+    </div>
+
+    <div id="final-verdict" style="display:none;margin-top:14px"></div>
+
+    <div class="form-btns">
+      <button class="btn-cancel" onclick="closePreCheck()" style="flex:1">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div class="menu-overlay" id="menu-ov" onclick="ovClick(event,'menu-ov')">
   <div class="menu-sheet">
@@ -402,6 +509,90 @@ function ovClick(e,id){if(e.target===document.getElementById(id)){if(id==='form-
 function openMenu(){document.getElementById('menu-ov').classList.add('show')}
 function closeMenu(){document.getElementById('menu-ov').classList.remove('show')}
 
+// PRE-TRADE CHECK
+let dttAnswers={1:null,2:null,3:null};
+function openPreCheck(){
+  dttAnswers={1:null,2:null,3:null};
+  ['q1','q2','q3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.classList.toggle('show',i===0);
+    document.querySelectorAll('#'+id+' .dtt-opt').forEach(o=>o.classList.remove('on'));
+    document.getElementById('msg'+(i+1)).classList.remove('show');
+  });
+  document.getElementById('final-verdict').style.display='none';
+  document.getElementById('precheck-ov').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closePreCheck(){
+  document.getElementById('precheck-ov').classList.remove('show');
+  document.body.style.overflow='';
+}
+function selectDtt(q,type){
+  dttAnswers[q]=type;
+  // mark selected
+  document.querySelectorAll('#q'+q+' .dtt-opt').forEach(o=>o.classList.remove('on'));
+  event.currentTarget.classList.add('on');
+
+  const msg=document.getElementById('msg'+q);
+  const messages={
+    1:{bad:'<b style="color:var(--red)">⚠ 위험 신호.</b><br>"이번엔 다를 것 같다"는 모든 트레이더가 망할 때 하는 생각입니다.<br>이 생각이 들 때가 가장 시스템 밖으로 나가기 쉬운 순간이에요.<br><b>이번도 똑같습니다. 100번 중 1번일 뿐.</b>',
+     good:'✓ 좋아요. 평소처럼 시스템대로.'},
+    2:{bad:'<b style="color:var(--red)">⚠ 감정 매매입니다.</b><br>지금 매수하는 이유가 신호가 아니라 감정이에요.<br>이 매매는 시스템 데이터에 들어가면 안 되는 매매입니다.<br><b>차트 끄고 30분 산책하고 오세요.</b>',
+     good:'✓ 시스템대로의 매수입니다.'},
+    3:{bad:'<b style="color:var(--red)">⚠ 계획 부재.</b><br>매수 후 계획이 명확하지 않으면 감정이 결정합니다.<br>그게 배트 일찍 내리는 패턴의 시작이에요.<br><b>지금 목표가를 정하고, 그걸 절대 안 바꿉니다.</b>',
+     good:'✓ 완벽합니다. 그게 딜러마인드.'}
+  };
+  msg.innerHTML=messages[q][type];
+  msg.classList.add('show');
+
+  // Move to next question after 1.5s
+  if(q<3){
+    setTimeout(()=>{
+      document.getElementById('q'+(q+1)).classList.add('show');
+      document.getElementById('q'+(q+1)).scrollIntoView({behavior:'smooth',block:'center'});
+    },1500);
+  } else {
+    setTimeout(showVerdict,1500);
+  }
+}
+
+function showVerdict(){
+  const badCount=Object.values(dttAnswers).filter(v=>v==='bad').length;
+  const v=document.getElementById('final-verdict');
+  v.style.display='block';
+  if(badCount===0){
+    v.innerHTML=`<div style="background:var(--grn3);border:1px solid var(--grn2);border-left:3px solid var(--grn);border-radius:10px;padding:16px">
+      <div style="color:var(--grn);font-size:14px;font-weight:700;margin-bottom:10px">✓ 진입 OK</div>
+      <div style="color:var(--t2);font-size:13px;font-family:var(--sans);line-height:1.7">
+        시스템대로 매매하세요.<br>
+        매수 → 지정가 → 화면 끄기.<br>
+        결과는 시스템이 결정합니다.
+      </div>
+    </div>`;
+  } else if(badCount===1){
+    v.innerHTML=`<div style="background:var(--amb3);border:1px solid var(--amb2);border-left:3px solid var(--amb);border-radius:10px;padding:16px">
+      <div style="color:var(--amb);font-size:14px;font-weight:700;margin-bottom:10px">⚠ 주의</div>
+      <div style="color:var(--t2);font-size:13px;font-family:var(--sans);line-height:1.7">
+        하나는 시스템 밖이에요.<br>
+        들어가더라도 <b>배팅 비중을 줄이세요.</b><br>
+        70% 이하로.
+      </div>
+    </div>`;
+  } else {
+    v.innerHTML=`<div style="background:var(--red3);border:1px solid var(--red2);border-left:3px solid var(--red);border-radius:10px;padding:16px">
+      <div style="color:var(--red);font-size:14px;font-weight:700;margin-bottom:10px">🛑 진입 금지</div>
+      <div style="color:var(--t2);font-size:13px;font-family:var(--sans);line-height:1.7">
+        ${badCount}개가 시스템 밖입니다.<br>
+        지금 매수 누르면 <b>100% 후회합니다.</b><br><br>
+        <b style="color:var(--red)">최고의 매매는 안 하는 매매입니다.</b><br><br>
+        차트 끄고 30분 떨어져 있으세요.<br>
+        그래도 들어가야겠다는 생각이 들면 — 그건 신호가 아니라 중독입니다.
+      </div>
+    </div>`;
+  }
+  v.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
 // FORM
 function openForm(id){
   editId=id||null;
@@ -418,6 +609,13 @@ function openForm(id){
   document.getElementById('f-target').value=(t&&t.targetPrice!==null)?t.targetPrice:'';
   document.getElementById('f-ghost').value=(t&&t.ghostPrice!==null)?t.ghostPrice:'';
   document.getElementById('f-memo').value=t?(t.memo||''):'';
+  // Bet size
+  const bs=document.getElementById('f-betsize');
+  bs.value=(t&&t.betSize!==undefined&&t.betSize!==null)?t.betSize:'';
+  bs.classList.remove('low','mid','full','over');
+  document.querySelectorAll('.bet-q').forEach(b=>b.classList.remove('on'));
+  if(t&&t.betSize)onBetInput(bs);
+  else document.getElementById('bet-msg').textContent='규칙대로면 100%. 무서워서 줄이고 있나요?';
   formSelectedExit=null;
   ['fer-s','fer-a','fer-t'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('on')});
   document.getElementById('form-exit-section').classList.remove('show');
@@ -454,6 +652,7 @@ function saveTrade(){
   if(isNaN(result)){alert('수익률을 입력하세요');return}
   const ghost=parseFloat(document.getElementById('f-ghost').value);
   const target=parseFloat(document.getElementById('f-target').value);
+  const betSize=parseFloat(document.getElementById('f-betsize').value);
   const t={
     id:editId||Date.now().toString(),
     date:document.getElementById('f-date').value,
@@ -462,6 +661,7 @@ function saveTrade(){
     result,
     ghostPrice:isNaN(ghost)?null:ghost,
     targetPrice:isNaN(target)?null:target,
+    betSize:isNaN(betSize)?null:betSize,
     rules:[...ruleState],
     memo:document.getElementById('f-memo').value.trim(),
     exitReason:(!isNaN(ghost)&&!isNaN(result)&&ghost>result)?formSelectedExit:null,
@@ -521,7 +721,7 @@ function renderLog(){
 </div>
 <div class="tc-nums">
   <div class="nb"><label>실제</label><div class="nv ${win?'g':'r'}">${fmt(t.result)}</div></div>
-  <div class="nb"><label>목표가</label><div class="nv d">${fmt(t.targetPrice)}</div></div>
+  <div class="nb"><label>배팅</label><div class="nv ${t.betSize?(t.betSize<70?'r':t.betSize<90?'a':'g'):'d'}">${t.betSize?t.betSize+'%':'-'}</div></div>
   <div class="nb"><label>고스트</label><div class="nv a">${fmt(t.ghostPrice)}</div>${missed!==null?`<div class="nb-miss">-${missed.toFixed(2)}% 놓침</div>`:''}</div>
 </div>
 ${exitBadge}
@@ -634,6 +834,36 @@ function renderStats(){
   <div class="dm-ttl">▸ 딜러마인드 체크</div>
   <div class="dm-text">총 <span class="hl-g">${trades.length}번</span>의 게임을 돌렸습니다.<br>규칙을 지킨 매매는 수익이든 손실이든<br><span class="hl-g">올바른 매매</span>입니다.</div>
 </div>`;
+
+  // Bet size analysis
+  const betTrades=trades.filter(t=>t.betSize!==null&&t.betSize!==undefined);
+  if(betTrades.length){
+    const avgBet=(betTrades.reduce((a,b)=>a+b.betSize,0)/betTrades.length).toFixed(0);
+    const fullBet=betTrades.filter(t=>t.betSize>=90&&t.betSize<=110).length;
+    const lowBet=betTrades.filter(t=>t.betSize<90).length;
+    const overBet=betTrades.filter(t=>t.betSize>110).length;
+    const lowBetWins=betTrades.filter(t=>t.betSize<90&&t.result>0).length;
+    const fullBetWins=betTrades.filter(t=>t.betSize>=90&&t.betSize<=110&&t.result>0).length;
+    const lowBetWR=lowBet?Math.round(lowBetWins/lowBet*100):0;
+    const fullBetWR=fullBet?Math.round(fullBetWins/fullBet*100):0;
+
+    html+=`<div class="rule-box">
+  <div class="rbox-ttl">▸ 배팅 비중 분석</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="text-align:center"><div class="tiny" style="font-size:10px;color:var(--t3)">평균 배팅</div><div style="font-size:22px;font-weight:700;color:${avgBet>=90?'var(--grn)':'var(--red)'};margin-top:4px">${avgBet}%</div></div>
+    <div style="text-align:center"><div class="tiny" style="font-size:10px;color:var(--t3)">풀배팅 (90~110%)</div><div style="font-size:22px;font-weight:700;color:var(--grn);margin-top:4px">${fullBet}건</div></div>
+    <div style="text-align:center"><div class="tiny" style="font-size:10px;color:var(--t3)">축소 배팅 (&lt;90%)</div><div style="font-size:22px;font-weight:700;color:var(--red);margin-top:4px">${lowBet}건</div></div>
+  </div>
+  ${lowBet>fullBet?`<div class="ghost-note" style="background:var(--red3);color:var(--t2);border-left:0">
+    <b style="color:var(--red)">무서워서 줄이고 있습니다.</b><br>
+    축소 배팅 ${lowBet}건 vs 풀배팅 ${fullBet}건<br>
+    축소 배팅 승률 <b>${lowBetWR}%</b> vs 풀배팅 승률 <b>${fullBetWR}%</b><br>
+    ${fullBetWR>=lowBetWR?`<span style="color:var(--amb)">→ 풀배팅이 더 안전합니다. 신호가 정확할 때 축소할 이유가 없어요.</span>`:'→ 데이터 더 쌓이면 패턴이 보입니다.'}
+  </div>`:fullBet>0?`<div class="ghost-note" style="background:var(--grn3);color:var(--t2);border-left:0">
+    <b style="color:var(--grn)">시스템대로 풀배팅하고 있습니다.</b><br>이 자세 유지하세요.
+  </div>`:''}
+</div>`;
+  }
 
   // Exit reason breakdown
   const exitCounts={shaken:0,anxious:0,target:0};
@@ -843,6 +1073,37 @@ function onResultInput(el){
   if(!isNaN(v)){el.classList.add(v>=0?'pos':'neg');}
   checkFormExitVisibility();
 }
+
+function onBetInput(el){
+  const v=parseFloat(el.value);
+  el.classList.remove('low','mid','full','over');
+  const msg=document.getElementById('bet-msg');
+  msg.classList.remove('fear','ok');
+  if(isNaN(v)){msg.textContent='규칙대로면 100%. 무서워서 줄이고 있나요?';return;}
+  if(v<70){
+    el.classList.add('low');
+    msg.classList.add('fear');
+    msg.innerHTML='⚠ 무서워서 줄이고 있어요. <b>확신 있는 자리는 풀배팅이 시스템.</b>';
+  }else if(v<100){
+    el.classList.add('mid');
+    msg.textContent='조금 덜 들어갔습니다. 다음엔 풀로.';
+  }else if(v<=110){
+    el.classList.add('full');
+    msg.classList.add('ok');
+    msg.innerHTML='✓ 시스템대로. 이게 정답입니다.';
+  }else{
+    el.classList.add('over');
+    msg.classList.add('ok');
+    msg.innerHTML='✓ 확신 있는 자리. 풀 이상 배팅했습니다.';
+  }
+}
+
+function setBet(v){
+  const el=document.getElementById('f-betsize');
+  el.value=v;
+  document.querySelectorAll('.bet-q').forEach(b=>b.classList.toggle('on',parseInt(b.textContent)===v));
+  onBetInput(el);
+}
 let ghostTargetId=null,selectedExit=null,formSelectedExit=null;
 
 function openGhostFill(id){
@@ -985,6 +1246,66 @@ function scheduleNotif(){
 load();
 renderLog();
 scheduleNotif();
+
+// PWA SETUP — inject manifest + icon inline so no server needed
+(function(){
+  // Generate app icon as SVG → data URL
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="100" fill="#07070f"/>
+    <rect x="40" y="40" width="432" height="432" rx="80" fill="#0d0d1a"/>
+    <text x="256" y="200" font-family="monospace" font-size="80" font-weight="bold" fill="#4f9dff" text-anchor="middle">DM</text>
+    <text x="256" y="280" font-family="monospace" font-size="36" fill="#4f9dff" text-anchor="middle" opacity=".7">DEALER</text>
+    <text x="256" y="330" font-family="monospace" font-size="36" fill="#4f9dff" text-anchor="middle" opacity=".7">MIND</text>
+    <rect x="80" y="370" width="140" height="8" rx="4" fill="#00e090" opacity=".8"/>
+    <rect x="240" y="370" width="80" height="8" rx="4" fill="#ff4060" opacity=".8"/>
+    <rect x="340" y="370" width="90" height="8" rx="4" fill="#ffaa20" opacity=".8"/>
+  </svg>`;
+  const iconUrl='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));
+
+  // Inject apple touch icon
+  document.getElementById('pwa-icon').href=iconUrl;
+
+  // Inject manifest
+  const manifest={
+    name:'딜러마인드',
+    short_name:'딜러마인드',
+    description:'100번의 게임 — 트레이딩 저널',
+    start_url:'.',
+    display:'standalone',
+    background_color:'#07070f',
+    theme_color:'#07070f',
+    orientation:'portrait',
+    icons:[
+      {src:iconUrl,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}
+    ]
+  };
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  document.getElementById('pwa-manifest').href=URL.createObjectURL(blob);
+
+  // Register service worker inline
+  if('serviceWorker' in navigator){
+    const swCode=`
+const CACHE='dealer-mind-v1';
+const URLS=[
+  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+  'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap'
+];
+self.addEventListener('install',e=>{
+  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS).catch(()=>{})));
+  self.skipWaiting();
+});
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch',e=>{
+  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>new Response('',{status:503}))));
+});`;
+    const swBlob=new Blob([swCode],{type:'application/javascript'});
+    const swUrl=URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl,{scope:'./'}).catch(()=>{});
+  }
+})();
 </script>
 </body>
 </html>
