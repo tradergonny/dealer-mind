@@ -619,7 +619,7 @@ function renderLog(){
 </div>
 ${(t.betPlan!==null&&t.betPlan!==undefined&&t.betSize!==null&&t.betSize!==undefined)?`<div style="font-size:11px;color:var(--t3);margin-top:6px;font-family:var(--sans);background:${Math.abs(t.betSize-t.betPlan)>=5?'var(--red3)':'rgba(0,224,144,0.05)'};padding:8px 10px;border-radius:6px;border-left:2px solid ${Math.abs(t.betSize-t.betPlan)>=5?'var(--red)':'var(--grn)'};line-height:1.6">
   📋 계획 ${t.betPlan}% → 💰 실제 <span style="color:${Math.abs(t.betSize-t.betPlan)>=5?'var(--red)':'var(--grn)'}">${t.betSize}%</span>${Math.abs(t.betSize-t.betPlan)<5?' ✓':''}
-  ${t.result!==0?`<br>👻 자본 대비: 실제 <b>${(t.result*t.betSize/100).toFixed(2)}%</b>${Math.abs(t.betSize-t.betPlan)>=5?` / 계획대로면 <b style="color:${t.result>0?'var(--grn)':'var(--red)'}">${(t.result*t.betPlan/100).toFixed(2)}%</b>${t.result>0?` (+${(t.result*(t.betPlan-t.betSize)/100).toFixed(2)}% 놓침)`:''}`:''}`:''}
+  ${t.result!==0?`<br>👻 자본 대비: 실제 <b>${(t.result*t.betSize/100).toFixed(2)}%</b>${Math.abs(t.betSize-t.betPlan)>=5?` / 계획대로면 <b style="color:${t.result>0?'var(--grn)':'var(--red)'}">${(t.result*t.betPlan/100).toFixed(2)}%</b>${t.result>0?` <b style="color:var(--red)">−${(t.result*(t.betPlan-t.betSize)/100).toFixed(2)}% 놓침</b>`:''}`:''}`:''}
 </div>`:t.betSize?`<div style="font-size:11px;color:var(--t3);margin-top:6px;font-family:var(--sans)">배팅: <span style="color:${t.betSize<70?'var(--red)':t.betSize<90?'var(--amb)':'var(--grn)'}">${t.betSize}%</span></div>`:''}
 ${exitBadge}
 ${t.memo?`<div class="tc-memo">${t.memo}</div>`:''}
@@ -712,11 +712,11 @@ function renderStats(){
     const topReason=Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1])[0];
 
     ghostTraderHTML=`<div class="ghost-box" style="background:linear-gradient(135deg,var(--red3),var(--amb3));border:2px solid var(--red);border-left:4px solid var(--red);padding:18px;margin-bottom:16px">
-  <div style="font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:14px;font-weight:700">▸ 배팅 못 한 대가 (계획 비중 기준)</div>
+  <div style="font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:14px;font-weight:700">▸ 배팅으로 놓친 수익 (계획 비중 기준)</div>
 
   <div style="text-align:center;margin-bottom:14px">
     <div style="font-size:11px;color:var(--t3);margin-bottom:4px">자본 대비 누적 놓친 수익</div>
-    <div style="font-size:42px;font-weight:700;color:var(--red);font-family:var(--mono);line-height:1">${ghostMissed>0?'−':''}${ghostMissed.toFixed(2)}%</div>
+    <div style="font-size:42px;font-weight:700;color:var(--red);font-family:var(--mono);line-height:1">${ghostMissed>0.001?'−'+ghostMissed.toFixed(2):ghostMissed.toFixed(2)}%</div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
@@ -731,8 +731,8 @@ function renderStats(){
   </div>
 
   <div style="background:rgba(0,0,0,.4);border-radius:8px;padding:12px;font-size:13px;color:var(--t1);line-height:1.8;font-family:var(--sans);margin-bottom:10px">
-    💰 <b>계획 비중대로 들어갔다면</b><br>
-    <b style="color:var(--grn);font-size:16px">+${ghostMissed.toFixed(2)}%</b> 가 더 자본에 쌓였습니다.<br>
+    💸 <b>배팅 줄여서 놓친 누적 수익</b><br>
+    <b style="color:var(--red);font-size:16px">−${ghostMissed.toFixed(2)}%</b> 자본에 못 쌓았습니다.<br>
     <span style="color:var(--t3);font-size:11px">축소 ${reduced.length}건 / 계획대로 ${onPlan.length}건</span>
   </div>
 
@@ -744,10 +744,10 @@ function renderStats(){
 </div>`;
   } else {
     ghostTraderHTML=`<div class="ghost-box" style="background:rgba(255,64,96,0.05);border:1px dashed var(--red);padding:16px;margin-bottom:16px;text-align:center">
-  <div style="font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:8px;font-weight:700">▸ 배팅 못 한 대가</div>
+  <div style="font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:8px;font-weight:700">▸ 배팅으로 놓친 수익</div>
   <div style="font-size:12px;color:var(--t3);font-family:var(--sans);line-height:1.7">
     매매 입력 시 <b style="color:var(--red)">계획 비중</b>도 함께 입력하면<br>
-    배팅 못 한 누적 대가가 여기에 나타납니다.
+    배팅 줄여서 놓친 누적 수익이 여기에 나타납니다.
   </div>
 </div>`;
   }
