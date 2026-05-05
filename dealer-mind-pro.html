@@ -891,9 +891,19 @@ function renderCharts(){
   const el=document.getElementById('tab-chart');
   if(!trades.length){el.innerHTML='<div class="empty"><div class="empty-ico">📈</div>매매를 기록하면 차트가 나타납니다.</div>';return}
   el.innerHTML=`
-<div class="chart-box">
-  <div class="chart-title">▸ 누적 수익률 곡선</div>
+<div class="chart-box" style="border:2px solid var(--red);background:linear-gradient(135deg,rgba(255,64,96,0.06),rgba(255,176,32,0.03))">
+  <div class="chart-title" style="color:var(--red)">▸ 💰 자본 누적 수익률 (실제 vs 계획)</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:10px;font-family:var(--sans);background:rgba(0,0,0,.3);padding:8px 10px;border-radius:6px;line-height:1.7">
+    <b style="color:#ff4060">━━━ 빨강</b>: 실제 자본 변화 (배팅한 만큼)<br>
+    <b style="color:#00e090">┄┄┄ 초록 점선</b>: 계획대로 했다면<br>
+    <span style="color:var(--t3);font-size:10px">두 선 차이가 = 배팅 못한 누적 대가</span>
+  </div>
   <div class="chart-wrap"><canvas id="c-equity"></canvas></div>
+</div>
+<div class="chart-box">
+  <div class="chart-title">▸ 종목 누적 수익률 (참고)</div>
+  <div style="font-size:10px;color:var(--t3);margin-bottom:8px;font-family:var(--sans)">매매당 % 수익률 합계 (배팅 무시)</div>
+  <div class="chart-wrap"><canvas id="c-equity-stock"></canvas></div>
 </div>
 <div class="chart-box">
   <div class="chart-title">▸ 월별 수익률</div>
@@ -902,10 +912,6 @@ function renderCharts(){
 <div class="chart-box">
   <div class="chart-title">▸ 수익/손실 분포</div>
   <div class="chart-wrap-sm"><canvas id="c-dist"></canvas></div>
-</div>
-<div class="chart-box">
-  <div class="chart-title">▸ 배팅 실제 vs 고스트</div>
-  <div class="chart-wrap"><canvas id="c-ghost"></canvas></div>
 </div>`;
 
   // Destroy old charts
@@ -915,14 +921,36 @@ function renderCharts(){
   const sorted=[...trades].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const cfg={color:'rgba(255,255,255,0.5)',grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{family:"'JetBrains Mono'",size:10},color:'rgba(255,255,255,0.3)'}};
 
-  // Equity curve
-  let cum=0;
+  // CAPITAL EQUITY CURVE — actual vs ghost (planned)
+  let cumActual=0, cumPlanned=0;
   const eqLabels=sorted.map(t=>t.ticker);
-  const eqData=sorted.map(t=>{cum+=t.result;return parseFloat(cum.toFixed(2))});
-  const eqColors=eqData.map(v=>v>=0?'rgba(0,224,144,0.8)':'rgba(255,64,96,0.8)');
+  const actualLine=sorted.map(t=>{
+    const bs=(t.betSize!==null&&t.betSize!==undefined)?t.betSize:100;
+    cumActual+=t.result*bs/100;
+    return parseFloat(cumActual.toFixed(2));
+  });
+  let cumP=0;
+  const plannedLine=sorted.map(t=>{
+    const bp=(t.betPlan!==null&&t.betPlan!==undefined)?t.betPlan:((t.betSize!==null&&t.betSize!==undefined)?t.betSize:100);
+    cumP+=t.result*bp/100;
+    return parseFloat(cumP.toFixed(2));
+  });
   activeCharts.equity=new Chart(document.getElementById('c-equity'),{
     type:'line',
-    data:{labels:eqLabels,datasets:[{data:eqData,borderColor:'#4f9dff',borderWidth:1.5,fill:true,backgroundColor:'rgba(79,157,255,0.08)',tension:.3,pointRadius:2,pointBackgroundColor:eqColors,pointBorderColor:'transparent'}]},
+    data:{labels:eqLabels,datasets:[
+      {label:'실제 자본',data:actualLine,borderColor:'#ff4060',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,64,96,0.10)',tension:.3,pointRadius:3,pointBackgroundColor:'#ff4060',pointBorderColor:'transparent'},
+      {label:'계획대로면',data:plannedLine,borderColor:'#00e090',borderWidth:2,borderDash:[6,4],fill:false,tension:.3,pointRadius:3,pointBackgroundColor:'#00e090',pointBorderColor:'transparent'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'rgba(255,255,255,0.7)',font:{family:"'Noto Sans KR'",size:11},boxWidth:14,padding:10}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.raw>=0?'+':'')+ctx.raw+'%'}}},scales:{x:{...cfg,display:false},y:{...cfg,ticks:{...cfg.ticks,callback:v=>(v>=0?'+':'')+v+'%'}}}}
+  });
+
+  // STOCK-LEVEL EQUITY (no bet size)
+  let cumStock=0;
+  const stockLine=sorted.map(t=>{cumStock+=t.result;return parseFloat(cumStock.toFixed(2))});
+  const stockColors=stockLine.map(v=>v>=0?'rgba(0,224,144,0.8)':'rgba(255,64,96,0.8)');
+  activeCharts.equityStock=new Chart(document.getElementById('c-equity-stock'),{
+    type:'line',
+    data:{labels:eqLabels,datasets:[{data:stockLine,borderColor:'rgba(255,255,255,0.5)',borderWidth:1.5,fill:true,backgroundColor:'rgba(255,255,255,0.04)',tension:.3,pointRadius:2,pointBackgroundColor:stockColors,pointBorderColor:'transparent'}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.raw>=0?'+':'')+ctx.raw+'%'}}},scales:{x:{...cfg,display:false},y:{...cfg,ticks:{...cfg.ticks,callback:v=>(v>=0?'+':'')+v+'%'}}}}
   });
 
@@ -951,20 +979,6 @@ function renderCharts(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{...cfg,ticks:{...cfg.ticks,font:{size:9,family:"'JetBrains Mono'"}}},y:{...cfg,ticks:{...cfg.ticks,precision:0}}}}
   });
 
-  // Ghost scatter
-  const ghostTrades=trades.filter(t=>t.ghostPrice!==null);
-  if(ghostTrades.length){
-    activeCharts.ghost=new Chart(document.getElementById('c-ghost'),{
-      type:'bar',
-      data:{labels:ghostTrades.slice(0,20).map(t=>t.ticker),datasets:[
-        {label:'실제',data:ghostTrades.slice(0,20).map(t=>t.result),backgroundColor:'rgba(79,157,255,0.7)',borderRadius:4},
-        {label:'고스트',data:ghostTrades.slice(0,20).map(t=>t.ghostPrice),backgroundColor:'rgba(255,170,32,0.5)',borderRadius:4}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.4)',font:{size:10,family:"'JetBrains Mono'"}}}},scales:{x:{...cfg,display:false},y:{...cfg,ticks:{...cfg.ticks,callback:v=>(v>=0?'+':'')+v+'%'}}}}
-    });
-  } else {
-    document.querySelector('.chart-box:last-child').innerHTML='<div class="chart-title">▸ 배팅 실제 vs 고스트</div><div style="text-align:center;padding:40px;color:var(--t3);font-family:var(--sans)">고스트 도달값을 기록하면<br>여기에 비교 차트가 나타납니다.</div>';
-  }
 }
 
 // MINDSET
