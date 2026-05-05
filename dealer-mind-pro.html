@@ -617,10 +617,10 @@ function renderLog(){
   <div class="nb"><label>🎯목표</label><div class="nv d">${fmt(t.targetPrice)}</div>${missed!==null?`<div class="nb-miss">-${missed.toFixed(2)}% 놓침</div>`:''}</div>
   <div class="nb"><label>👻당일고점</label><div class="nv a">${fmt(t.ghostPrice)}</div></div>
 </div>
-${(t.betPlan&&t.betSize&&Math.abs(t.betSize-t.betPlan)>=5)?`<div style="font-size:11px;color:var(--t3);margin-top:6px;font-family:var(--sans);background:var(--red3);padding:8px 10px;border-radius:6px;border-left:2px solid var(--red);line-height:1.6">
-  📋 계획 ${t.betPlan}% → 💰 실제 <span style="color:var(--red)">${t.betSize}%</span>
-  ${t.result!==0?`<br>👻 자본 대비: 실제 <b>${(t.result*t.betSize/100).toFixed(2)}%</b> / 계획대로면 <b style="color:${t.result>0?'var(--grn)':'var(--red)'}">${(t.result*t.betPlan/100).toFixed(2)}%</b>${t.result>0?` (+${(t.result*(t.betPlan-t.betSize)/100).toFixed(2)}% 놓침)`:''}`:''}
-</div>`:t.betSize?`<div style="font-size:11px;color:var(--t3);margin-top:6px;font-family:var(--sans)">배팅: <span style="color:${t.betSize<70?'var(--red)':t.betSize<90?'var(--amb)':'var(--grn)'}">${t.betSize}%</span>${t.betPlan?` (계획대로)`:''}</div>`:''}
+${(t.betPlan!==null&&t.betPlan!==undefined&&t.betSize!==null&&t.betSize!==undefined)?`<div style="font-size:11px;color:var(--t3);margin-top:6px;font-family:var(--sans);background:${Math.abs(t.betSize-t.betPlan)>=5?'var(--red3)':'rgba(0,224,144,0.05)'};padding:8px 10px;border-radius:6px;border-left:2px solid ${Math.abs(t.betSize-t.betPlan)>=5?'var(--red)':'var(--grn)'};line-height:1.6">
+  📋 계획 ${t.betPlan}% → 💰 실제 <span style="color:${Math.abs(t.betSize-t.betPlan)>=5?'var(--red)':'var(--grn)'}">${t.betSize}%</span>${Math.abs(t.betSize-t.betPlan)<5?' ✓':''}
+  ${t.result!==0?`<br>👻 자본 대비: 실제 <b>${(t.result*t.betSize/100).toFixed(2)}%</b>${Math.abs(t.betSize-t.betPlan)>=5?` / 계획대로면 <b style="color:${t.result>0?'var(--grn)':'var(--red)'}">${(t.result*t.betPlan/100).toFixed(2)}%</b>${t.result>0?` (+${(t.result*(t.betPlan-t.betSize)/100).toFixed(2)}% 놓침)`:''}`:''}`:''}
+</div>`:t.betSize?`<div style="font-size:11px;color:var(--t3);margin-top:6px;font-family:var(--sans)">배팅: <span style="color:${t.betSize<70?'var(--red)':t.betSize<90?'var(--amb)':'var(--grn)'}">${t.betSize}%</span></div>`:''}
 ${exitBadge}
 ${t.memo?`<div class="tc-memo">${t.memo}</div>`:''}
 <div class="tc-bottom">
@@ -892,13 +892,14 @@ function renderCharts(){
   if(!trades.length){el.innerHTML='<div class="empty"><div class="empty-ico">📈</div>매매를 기록하면 차트가 나타납니다.</div>';return}
   el.innerHTML=`
 <div class="chart-box" style="border:2px solid var(--red);background:linear-gradient(135deg,rgba(255,64,96,0.06),rgba(255,176,32,0.03))">
-  <div class="chart-title" style="color:var(--red)">▸ 💰 자본 누적 수익률 (실제 vs 계획)</div>
-  <div style="font-size:11px;color:var(--t2);margin-bottom:10px;font-family:var(--sans);background:rgba(0,0,0,.3);padding:8px 10px;border-radius:6px;line-height:1.7">
-    <b style="color:#ff4060">━━━ 빨강</b>: 실제 자본 변화 (배팅한 만큼)<br>
-    <b style="color:#00e090">┄┄┄ 초록 점선</b>: 계획대로 했다면<br>
-    <span style="color:var(--t3);font-size:10px">두 선 차이가 = 배팅 못한 누적 대가</span>
+  <div class="chart-title" style="color:var(--red)">▸ 💰 자본 누적 수익률 — 4가지 시나리오</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:10px;font-family:var(--sans);background:rgba(0,0,0,.3);padding:10px 12px;border-radius:6px;line-height:1.9">
+    <b style="color:#ff4060">━━━ 현실</b>: 실제 배팅 × 실제 매도가<br>
+    <b style="color:#ffaa20">┄┄┄ 계획 배팅했다면</b>: 풀배팅 했을 때<br>
+    <b style="color:#4f9dff">┄┄┄ 목표가까지 들었다면</b>: 일찍 안 팔았을 때<br>
+    <b style="color:#00e090">━━━ 완벽</b>: 둘 다 계획대로
   </div>
-  <div class="chart-wrap"><canvas id="c-equity"></canvas></div>
+  <div class="chart-wrap" style="height:280px"><canvas id="c-equity"></canvas></div>
 </div>
 <div class="chart-box">
   <div class="chart-title">▸ 종목 누적 수익률 (참고)</div>
@@ -921,27 +922,42 @@ function renderCharts(){
   const sorted=[...trades].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const cfg={color:'rgba(255,255,255,0.5)',grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{family:"'JetBrains Mono'",size:10},color:'rgba(255,255,255,0.3)'}};
 
-  // CAPITAL EQUITY CURVE — actual vs ghost (planned)
-  let cumActual=0, cumPlanned=0;
+  // ★ CAPITAL EQUITY — 4 lines
+  // 1. 현실: 실제 배팅 × 실제 매도가
+  // 2. 계획 배팅: 계획 비중 × 실제 매도가
+  // 3. 계획 매도: 실제 배팅 × 목표가
+  // 4. 둘 다 계획: 계획 비중 × 목표가
   const eqLabels=sorted.map(t=>t.ticker);
-  const actualLine=sorted.map(t=>{
-    const bs=(t.betSize!==null&&t.betSize!==undefined)?t.betSize:100;
-    cumActual+=t.result*bs/100;
-    return parseFloat(cumActual.toFixed(2));
+  let cumReal=0, cumPlanBet=0, cumPlanTarget=0, cumPerfect=0;
+  const realLine=[], planBetLine=[], planTargetLine=[], perfectLine=[];
+
+  sorted.forEach(t=>{
+    const realResult=t.result;
+    const targetResult=(t.targetPrice!==null&&t.targetPrice!==undefined)?Math.max(t.targetPrice,t.result):t.result;
+    // (target only counts if it was higher than what you actually got — "if you'd held longer")
+    const realBet=(t.betSize!==null&&t.betSize!==undefined)?t.betSize:100;
+    const planBet=(t.betPlan!==null&&t.betPlan!==undefined)?t.betPlan:realBet;
+
+    cumReal      += realResult * realBet / 100;
+    cumPlanBet   += realResult * planBet / 100;
+    cumPlanTarget+= targetResult * realBet / 100;
+    cumPerfect   += targetResult * planBet / 100;
+
+    realLine.push(parseFloat(cumReal.toFixed(2)));
+    planBetLine.push(parseFloat(cumPlanBet.toFixed(2)));
+    planTargetLine.push(parseFloat(cumPlanTarget.toFixed(2)));
+    perfectLine.push(parseFloat(cumPerfect.toFixed(2)));
   });
-  let cumP=0;
-  const plannedLine=sorted.map(t=>{
-    const bp=(t.betPlan!==null&&t.betPlan!==undefined)?t.betPlan:((t.betSize!==null&&t.betSize!==undefined)?t.betSize:100);
-    cumP+=t.result*bp/100;
-    return parseFloat(cumP.toFixed(2));
-  });
+
   activeCharts.equity=new Chart(document.getElementById('c-equity'),{
     type:'line',
     data:{labels:eqLabels,datasets:[
-      {label:'실제 자본',data:actualLine,borderColor:'#ff4060',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,64,96,0.10)',tension:.3,pointRadius:3,pointBackgroundColor:'#ff4060',pointBorderColor:'transparent'},
-      {label:'계획대로면',data:plannedLine,borderColor:'#00e090',borderWidth:2,borderDash:[6,4],fill:false,tension:.3,pointRadius:3,pointBackgroundColor:'#00e090',pointBorderColor:'transparent'}
+      {label:'현실 (실배팅×실매도)',data:realLine,borderColor:'#ff4060',borderWidth:2.5,fill:true,backgroundColor:'rgba(255,64,96,0.10)',tension:.3,pointRadius:3,pointBackgroundColor:'#ff4060',pointBorderColor:'transparent'},
+      {label:'계획 배팅했다면',data:planBetLine,borderColor:'#ffaa20',borderWidth:2,borderDash:[8,4],fill:false,tension:.3,pointRadius:2,pointBackgroundColor:'#ffaa20',pointBorderColor:'transparent'},
+      {label:'목표가까지 들었다면',data:planTargetLine,borderColor:'#4f9dff',borderWidth:2,borderDash:[2,3],fill:false,tension:.3,pointRadius:2,pointBackgroundColor:'#4f9dff',pointBorderColor:'transparent'},
+      {label:'완벽 (둘 다 계획)',data:perfectLine,borderColor:'#00e090',borderWidth:2.5,fill:false,tension:.3,pointRadius:3,pointBackgroundColor:'#00e090',pointBorderColor:'transparent'}
     ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'rgba(255,255,255,0.7)',font:{family:"'Noto Sans KR'",size:11},boxWidth:14,padding:10}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.raw>=0?'+':'')+ctx.raw+'%'}}},scales:{x:{...cfg,display:false},y:{...cfg,ticks:{...cfg.ticks,callback:v=>(v>=0?'+':'')+v+'%'}}}}
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{color:'rgba(255,255,255,0.75)',font:{family:"'Noto Sans KR'",size:10},boxWidth:12,padding:8,usePointStyle:false}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.raw>=0?'+':'')+ctx.raw+'%'}}},scales:{x:{...cfg,display:false},y:{...cfg,ticks:{...cfg.ticks,callback:v=>(v>=0?'+':'')+v+'%'}}}}
   });
 
   // STOCK-LEVEL EQUITY (no bet size)
