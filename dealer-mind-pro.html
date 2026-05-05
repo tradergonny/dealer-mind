@@ -687,7 +687,78 @@ function renderStats(){
   });
   const months=Object.keys(monthly).sort().reverse();
 
-  let html=`
+  // GHOST TRADER — planned vs actual analysis (calculated FIRST so we can put at top)
+  const planTrades=trades.filter(t=>t.betPlan!==null&&t.betPlan!==undefined&&t.betSize!==null&&t.betSize!==undefined);
+  let ghostTraderHTML='';
+  if(planTrades.length){
+    const reduced=planTrades.filter(t=>t.betSize<t.betPlan-5);
+    const onPlan=planTrades.filter(t=>Math.abs(t.betSize-t.betPlan)<5);
+
+    let actualCapitalPnL=0;
+    let plannedCapitalPnL=0;
+    planTrades.forEach(t=>{
+      actualCapitalPnL+=t.result*t.betSize/100;
+      plannedCapitalPnL+=t.result*t.betPlan/100;
+    });
+    const ghostMissed=plannedCapitalPnL-actualCapitalPnL;
+
+    const reasonCounts={};
+    REDUCE_REASONS.forEach(r=>reasonCounts[r.id]=0);
+    reduced.forEach(t=>{
+      if(t.betDeviationReason&&reasonCounts[t.betDeviationReason]!==undefined){
+        reasonCounts[t.betDeviationReason]++;
+      }
+    });
+    const topReason=Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1])[0];
+
+    ghostTraderHTML=`<div class="ghost-box" style="background:linear-gradient(135deg,#2d0a3a,#3a0a1e);border:2px solid var(--pur);border-left:4px solid var(--pur);padding:18px;margin-bottom:16px">
+  <div style="font-size:11px;color:var(--pur);letter-spacing:2px;margin-bottom:14px;font-weight:700">▸ 👻 고스트 트레이더 — 배팅 못 한 대가</div>
+
+  <div style="text-align:center;margin-bottom:14px">
+    <div style="font-size:11px;color:var(--t3);margin-bottom:4px">계획대로 풀배팅했다면 더 벌었을 자본 수익</div>
+    <div style="font-size:42px;font-weight:700;color:${ghostMissed>0.01?'var(--grn)':'var(--t2)'};font-family:var(--mono);line-height:1">${ghostMissed>0?'+':''}${ghostMissed.toFixed(2)}%</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:12px;text-align:center">
+      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">실제 자본 수익</div>
+      <div style="font-size:18px;font-weight:700;color:${actualCapitalPnL>=0?'var(--grn)':'var(--red)'}">${actualCapitalPnL>=0?'+':''}${actualCapitalPnL.toFixed(2)}%</div>
+    </div>
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:12px;text-align:center">
+      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">계획대로면</div>
+      <div style="font-size:18px;font-weight:700;color:${plannedCapitalPnL>=0?'var(--grn)':'var(--red)'}">${plannedCapitalPnL>=0?'+':''}${plannedCapitalPnL.toFixed(2)}%</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">계획대로 실행</div>
+      <div style="font-size:16px;font-weight:700;color:var(--grn)">${onPlan.length}건</div>
+    </div>
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">축소 실행</div>
+      <div style="font-size:16px;font-weight:700;color:var(--red)">${reduced.length}건</div>
+    </div>
+  </div>
+
+  ${topReason&&topReason[1]>0?`<div style="background:rgba(0,0,0,.4);border-radius:8px;padding:12px;font-size:13px;color:var(--t1);line-height:1.7;font-family:var(--sans)">
+    <div style="color:var(--pur);font-size:11px;letter-spacing:1px;margin-bottom:6px">가장 자주 줄이는 이유</div>
+    <b>${REDUCE_REASONS.find(r=>r.id===topReason[0]).icon} ${REDUCE_REASONS.find(r=>r.id===topReason[0]).txt}</b> (${topReason[1]}회)<br>
+    <span style="color:var(--t3);font-size:11px">이 이유로 자기 시스템을 거역했습니다.</span>
+  </div>`:''}
+</div>`;
+  } else {
+    // Show even when no betPlan recorded yet — gentle prompt
+    ghostTraderHTML=`<div class="ghost-box" style="background:rgba(160,128,255,0.05);border:1px dashed var(--pur);padding:16px;margin-bottom:16px;text-align:center">
+  <div style="font-size:11px;color:var(--pur);letter-spacing:2px;margin-bottom:8px;font-weight:700">▸ 👻 고스트 트레이더</div>
+  <div style="font-size:12px;color:var(--t3);font-family:var(--sans);line-height:1.7">
+    매매 입력 시 <b style="color:var(--pur)">계획 비중</b>도 함께 입력하면<br>
+    배팅 못 한 누적 대가가 여기에 나타납니다.
+  </div>
+</div>`;
+  }
+
+  let html=`${ghostTraderHTML}
 <div class="ghost-box" style="background:linear-gradient(135deg,var(--red3),var(--amb3));border:2px solid var(--red);border-left:4px solid var(--red);padding:18px;margin-bottom:16px">
   <div style="font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:14px;font-weight:700">▸ 배트 일찍 내린 대가 (목표가 기준)</div>
   ${targetMissed.length?`
@@ -763,69 +834,6 @@ function renderStats(){
   <div class="dm-ttl">▸ 딜러마인드 체크</div>
   <div class="dm-text">총 <span class="hl-g">${trades.length}번</span>의 게임을 돌렸습니다.<br>규칙을 지킨 매매는 수익이든 손실이든<br><span class="hl-g">올바른 매매</span>입니다.</div>
 </div>`;
-
-  // GHOST TRADER — planned vs actual analysis
-  const planTrades=trades.filter(t=>t.betPlan!==null&&t.betPlan!==undefined&&t.betSize!==null&&t.betSize!==undefined);
-  if(planTrades.length){
-    const reduced=planTrades.filter(t=>t.betSize<t.betPlan-5);
-    const onPlan=planTrades.filter(t=>Math.abs(t.betSize-t.betPlan)<5);
-
-    // Ghost trader profit calculation
-    let actualCapitalPnL=0;
-    let plannedCapitalPnL=0;
-    planTrades.forEach(t=>{
-      actualCapitalPnL+=t.result*t.betSize/100;
-      plannedCapitalPnL+=t.result*t.betPlan/100;
-    });
-    const ghostMissed=plannedCapitalPnL-actualCapitalPnL;
-
-    // Reason breakdown
-    const reasonCounts={};
-    REDUCE_REASONS.forEach(r=>reasonCounts[r.id]=0);
-    reduced.forEach(t=>{
-      if(t.betDeviationReason&&reasonCounts[t.betDeviationReason]!==undefined){
-        reasonCounts[t.betDeviationReason]++;
-      }
-    });
-    const topReason=Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1])[0];
-
-    html+=`<div class="ghost-box" style="background:linear-gradient(135deg,var(--pur2),var(--red3));border:2px solid var(--pur);border-left:4px solid var(--pur);padding:18px;margin-bottom:16px">
-  <div style="font-size:11px;color:var(--pur);letter-spacing:2px;margin-bottom:14px;font-weight:700">▸ 👻 고스트 트레이더 — 계획대로 했다면</div>
-
-  <div style="text-align:center;margin-bottom:14px">
-    <div style="font-size:11px;color:var(--t3);margin-bottom:4px">계획대로면 더 벌었을 자본 수익</div>
-    <div style="font-size:42px;font-weight:700;color:${ghostMissed>0?'var(--grn)':'var(--t2)'};font-family:var(--mono);line-height:1">${ghostMissed>0?'+':''}${ghostMissed.toFixed(2)}%</div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:12px;text-align:center">
-      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">실제 자본 수익</div>
-      <div style="font-size:18px;font-weight:700;color:${actualCapitalPnL>=0?'var(--grn)':'var(--red)'}">${actualCapitalPnL>=0?'+':''}${actualCapitalPnL.toFixed(2)}%</div>
-    </div>
-    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:12px;text-align:center">
-      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">계획대로면</div>
-      <div style="font-size:18px;font-weight:700;color:${plannedCapitalPnL>=0?'var(--grn)':'var(--red)'}">${plannedCapitalPnL>=0?'+':''}${plannedCapitalPnL.toFixed(2)}%</div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;text-align:center">
-      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">계획대로 실행</div>
-      <div style="font-size:16px;font-weight:700;color:var(--grn)">${onPlan.length}건</div>
-    </div>
-    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;text-align:center">
-      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">축소 실행</div>
-      <div style="font-size:16px;font-weight:700;color:var(--red)">${reduced.length}건</div>
-    </div>
-  </div>
-
-  ${topReason&&topReason[1]>0?`<div style="background:rgba(0,0,0,.4);border-radius:8px;padding:12px;font-size:13px;color:var(--t1);line-height:1.7;font-family:var(--sans)">
-    <div style="color:var(--pur);font-size:11px;letter-spacing:1px;margin-bottom:6px">가장 자주 줄이는 이유</div>
-    <b>${REDUCE_REASONS.find(r=>r.id===topReason[0]).icon} ${REDUCE_REASONS.find(r=>r.id===topReason[0]).txt}</b> (${topReason[1]}회)<br>
-    <span style="color:var(--t3);font-size:11px">이 이유로 자기 시스템을 거역했습니다.</span>
-  </div>`:''}
-</div>`;
-  }
 
   // Bet size simple analysis
   const betTrades=trades.filter(t=>t.betSize!==null&&t.betSize!==undefined);
