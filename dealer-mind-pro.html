@@ -311,6 +311,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
     <div class="handle"></div>
     <div class="form-ttl" id="form-ttl">▸ 새 매매 기록</div>
 
+    <div id="nasdaq-form-warning" style="display:none;margin-bottom:14px"></div>
+
     <div class="step-hd"><div class="step-num">1</div><div class="step-lbl">날짜 & 종목</div></div>
     <div class="grid2" style="margin-bottom:10px">
       <div class="field" style="margin-bottom:0"><label>날짜</label><input class="fi" type="date" id="f-date"></div>
@@ -511,6 +513,8 @@ function openForm(id){
   renderRuleCks();
   document.getElementById('form-ov').classList.add('show');
   document.body.style.overflow='hidden';
+  updateNasdaqFormWarning();
+  fetchNasdaqMA().then(()=>updateNasdaqFormWarning()).catch(()=>{});
   setTimeout(()=>{
     const gf=document.getElementById('f-ghost');
     const tf=document.getElementById('f-target');
@@ -572,6 +576,9 @@ function renderLog(){
   const wins=filtered.filter(t=>t.result>0);
   const sumR=filtered.reduce((a,b)=>a+b.result,0);
   let html='';
+
+  // Bear market alert (나스닥 120일선 2달 연속 종가 하회)
+  html+=renderBearMarketAlert();
 
   // Ghost alert banner (only when not dismissed today)
   if(alertDismissedAt!==today()){html+=renderGhostAlert();}
@@ -1322,10 +1329,184 @@ function scheduleNotif(){
   },delay);
 }
 
+// =====================================================
+// NASDAQ MA INDICATOR — 60일선 경고 / 120일선 2달 연속 = 하락장
+// =====================================================
+const NASDAQ_CACHE_KEY='nasdaq_ma_v1';
+const NASDAQ_TTL_MS=6*60*60*1000; // 6시간 캐시
+let nasdaqState=null;
+let nasdaqFetchPromise=null;
+
+async function fetchNasdaqMA(){
+  // 캐시 먼저 확인
+  try{
+    const raw=localStorage.getItem(NASDAQ_CACHE_KEY);
+    if(raw){
+      const p=JSON.parse(raw);
+      if(Date.now()-p.timestamp<NASDAQ_TTL_MS){
+        nasdaqState=p.state;
+        return nasdaqState;
+      }
+    }
+  }catch(e){}
+
+  if(nasdaqFetchPromise)return nasdaqFetchPromise;
+  nasdaqFetchPromise=(async()=>{
+    let closes=null,lastDate=null;
+
+    // 1차: Stooq CSV (나스닥 종합)
+    try{
+      const res=await fetch('https://stooq.com/q/d/l/?s=^ndq&i=d');
+      if(res.ok){
+        const text=await res.text();
+        const lines=text.trim().split('\n');
+        if(lines.length>=170&&lines[0].toLowerCase().includes('close')){
+          const tmp=[];let ld=null;
+          for(let i=1;i<lines.length;i++){
+            const p=lines[i].split(',');
+            if(p.length<5)continue;
+            const c=parseFloat(p[4]);
+            if(isNaN(c))continue;
+            tmp.push(c);ld=p[0];
+          }
+          if(tmp.length>=170){closes=tmp;lastDate=ld;}
+        }
+      }
+    }catch(e){}
+
+    // 2차 폴백: Yahoo Finance (corsproxy 경유)
+    if(!closes){
+      try{
+        const yurl='https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC?range=1y&interval=1d';
+        const res=await fetch('https://corsproxy.io/?'+encodeURIComponent(yurl));
+        if(res.ok){
+          const j=await res.json();
+          const r=j&&j.chart&&j.chart.result&&j.chart.result[0];
+          if(r){
+            const ts=r.timestamp||[];
+            const cArr=(r.indicators&&r.indicators.quote&&r.indicators.quote[0]&&r.indicators.quote[0].close)||[];
+            const tmp=[];let lastT=null;
+            for(let i=0;i<cArr.length;i++){
+              if(typeof cArr[i]==='number'&&!isNaN(cArr[i])){
+                tmp.push(cArr[i]);
+                if(ts[i])lastT=ts[i];
+              }
+            }
+            if(tmp.length>=170){
+              closes=tmp;
+              if(lastT)lastDate=new Date(lastT*1000).toISOString().slice(0,10);
+            }
+          }
+        }
+      }catch(e){}
+    }
+
+    if(!closes){
+      // 스테일 캐시라도 사용
+      try{
+        const raw=localStorage.getItem(NASDAQ_CACHE_KEY);
+        if(raw){nasdaqState={...JSON.parse(raw).state,stale:true};return nasdaqState;}
+      }catch(e){}
+      return null;
+    }
+
+    const lastIdx=closes.length-1;
+    const ma60=closes.slice(lastIdx-59,lastIdx+1).reduce((a,b)=>a+b,0)/60;
+    const ma120=closes.slice(lastIdx-119,lastIdx+1).reduce((a,b)=>a+b,0)/120;
+    const below60=closes[lastIdx]<ma60;
+
+    // 하락장 판정: 최근 44 거래일(~2개월) 모두 종가 < 그날의 MA120
+    const BEAR=44;
+    let bear=true;
+    if(closes.length<120+BEAR){bear=false;}
+    else{
+      for(let i=lastIdx-BEAR+1;i<=lastIdx;i++){
+        const slc=closes.slice(i-119,i+1);
+        if(slc.length<120){bear=false;break;}
+        const m=slc.reduce((a,b)=>a+b,0)/120;
+        if(closes[i]>=m){bear=false;break;}
+      }
+    }
+
+    const state={below60,bearMarket:bear,lastClose:closes[lastIdx],ma60,ma120,lastDate:lastDate||today()};
+    nasdaqState=state;
+    try{localStorage.setItem(NASDAQ_CACHE_KEY,JSON.stringify({timestamp:Date.now(),state}));}catch(e){}
+    return state;
+  })();
+
+  try{return await nasdaqFetchPromise;}
+  finally{nasdaqFetchPromise=null;}
+}
+
+function updateNasdaqFormWarning(){
+  const el=document.getElementById('nasdaq-form-warning');
+  if(!el)return;
+  if(nasdaqState&&nasdaqState.below60){
+    el.style.display='block';
+    el.innerHTML=`<div style="background:var(--red3);border:1px solid var(--red2);border-left:3px solid var(--red);border-radius:10px;padding:11px 13px;font-family:var(--sans)">
+      <div style="font-size:13px;color:var(--red);font-weight:700;letter-spacing:.5px;margin-bottom:4px">⚡ (술식 오타니)</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.6">나스닥이 60일 이평선 아래입니다. 비중 작게, 손절 빠르게.</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:5px;font-family:var(--mono)">종가 ${nasdaqState.lastClose.toFixed(0)} &lt; MA60 ${nasdaqState.ma60.toFixed(0)} · ${nasdaqState.lastDate}${nasdaqState.stale?' (캐시)':''}</div>
+    </div>`;
+  }else{
+    el.style.display='none';
+    el.innerHTML='';
+  }
+}
+
+function renderBearMarketAlert(){
+  if(!nasdaqState||!nasdaqState.bearMarket)return '';
+  const dKey='bear_alert_dismissed_'+nasdaqState.lastDate;
+  if(localStorage.getItem(dKey))return '';
+  return `<div style="background:var(--red3);border:1px solid var(--red2);border-left:3px solid var(--red);border-radius:14px;padding:14px;margin-bottom:12px;font-family:var(--sans)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:12px;color:var(--red);letter-spacing:1.5px;font-weight:700">⚠ 하락장입니다</span>
+      <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">${nasdaqState.lastDate}${nasdaqState.stale?' (캐시)':''}</span>
+    </div>
+    <div style="font-size:12px;color:var(--t2);line-height:1.7">
+      나스닥이 120일 이평선 아래로 약 2개월(44 거래일) 연속 종가 마감했습니다.<br>배팅 비중 줄이고 보수적으로 운영하세요.
+    </div>
+    <div style="font-size:10px;color:var(--t3);margin-top:7px;font-family:var(--mono)">
+      종가 ${nasdaqState.lastClose.toFixed(0)} &lt; MA120 ${nasdaqState.ma120.toFixed(0)}
+    </div>
+    <div style="font-size:11px;color:var(--t3);text-align:center;padding-top:10px;cursor:pointer" onclick="dismissBearAlert()">오늘은 닫기</div>
+  </div>`;
+}
+
+function dismissBearAlert(){
+  if(nasdaqState){
+    localStorage.setItem('bear_alert_dismissed_'+nasdaqState.lastDate,'1');
+    renderLog();
+  }
+}
+
+function maybeFireBearNotification(){
+  if(!nasdaqState||!nasdaqState.bearMarket)return;
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const k='bear_notif_fired_'+nasdaqState.lastDate;
+  if(localStorage.getItem(k))return;
+  try{
+    new Notification('DEALER MIND — ⚠ 하락장 경고',{
+      body:`나스닥 120일선 아래로 2달 연속 마감. 종가 ${nasdaqState.lastClose.toFixed(0)} / MA120 ${nasdaqState.ma120.toFixed(0)}`,
+      icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⚠️</text></svg>'
+    });
+    localStorage.setItem(k,'1');
+  }catch(e){}
+}
+
 // INIT
 load();
 renderLog();
 scheduleNotif();
+
+// 나스닥 지표 가져오기 (비동기) — 끝나면 다시 렌더
+(async()=>{
+  try{
+    await fetchNasdaqMA();
+    renderLog();
+    maybeFireBearNotification();
+  }catch(e){}
+})();
 
 // PWA SETUP — inject manifest + icon inline so no server needed
 (function(){
