@@ -577,8 +577,8 @@ function renderLog(){
   const sumR=filtered.reduce((a,b)=>a+b.result,0);
   let html='';
 
-  // Bear market alert (나스닥 120일선 2달 연속 종가 하회)
-  html+=renderBearMarketAlert();
+  // Market status banner (항상 표시 — 하락장 yes/no)
+  html+=renderMarketStatus();
 
   // Ghost alert banner (only when not dismissed today)
   if(alertDismissedAt!==today()){html+=renderGhostAlert();}
@@ -600,6 +600,7 @@ function renderLog(){
 
   if(!filtered.length){
     html+='<div class="empty"><div class="empty-ico">📋</div>기록이 없습니다.<br>+ 추가 버튼을 눌러 시작하세요.</div>';
+    html+=renderOtaniBox();
     el.innerHTML=html;return;
   }
 
@@ -639,6 +640,10 @@ ${t.memo?`<div class="tc-memo">${t.memo}</div>`:''}
 </div>
 </div>`;
   });
+
+  // Otani box at bottom (항상 표시)
+  html+=renderOtaniBox();
+
   el.innerHTML=html;
 }
 
@@ -1330,7 +1335,7 @@ function scheduleNotif(){
 }
 
 // =====================================================
-// NASDAQ MA INDICATOR — 60일선 경고 / 120일선 2달 연속 = 하락장
+// NASDAQ MA INDICATOR — 60일선 / 120일선 2달 연속 하락장 판정
 // =====================================================
 const NASDAQ_CACHE_KEY='nasdaq_ma_v1';
 const NASDAQ_TTL_MS=6*60*60*1000; // 6시간 캐시
@@ -1438,6 +1443,7 @@ async function fetchNasdaqMA(){
   finally{nasdaqFetchPromise=null;}
 }
 
+// 폼 안 (술식 오타니) 경고 — 60일선 아래일 때만
 function updateNasdaqFormWarning(){
   const el=document.getElementById('nasdaq-form-warning');
   if(!el)return;
@@ -1454,32 +1460,62 @@ function updateNasdaqFormWarning(){
   }
 }
 
-function renderBearMarketAlert(){
-  if(!nasdaqState||!nasdaqState.bearMarket)return '';
-  const dKey='bear_alert_dismissed_'+nasdaqState.lastDate;
-  if(localStorage.getItem(dKey))return '';
-  return `<div style="background:var(--red3);border:1px solid var(--red2);border-left:3px solid var(--red);border-radius:14px;padding:14px;margin-bottom:12px;font-family:var(--sans)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <span style="font-size:12px;color:var(--red);letter-spacing:1.5px;font-weight:700">⚠ 하락장입니다</span>
+// 매매기록 탭 상단 — 하락장 yes/no 항상 표시
+function renderMarketStatus(){
+  if(!nasdaqState){
+    return `<div style="background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-family:var(--sans);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:12px;color:var(--t3);letter-spacing:.5px">📡 나스닥 데이터 가져오는 중...</span>
+    </div>`;
+  }
+  if(nasdaqState.bearMarket){
+    return `<div style="background:var(--red3);border:1px solid var(--red2);border-left:3px solid var(--red);border-radius:14px;padding:14px;margin-bottom:12px;font-family:var(--sans)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:13px;color:var(--red);letter-spacing:1px;font-weight:700">⚠ 하락장입니다</span>
+        <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">${nasdaqState.lastDate}${nasdaqState.stale?' (캐시)':''}</span>
+      </div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.7">
+        나스닥 120일 이평선 아래로 약 2개월(44 거래일) 연속 종가 마감.<br>배팅 비중 줄이고 보수적으로 운영하세요.
+      </div>
+      <div style="font-size:10px;color:var(--t3);margin-top:7px;font-family:var(--mono)">
+        종가 ${nasdaqState.lastClose.toFixed(0)} &lt; MA120 ${nasdaqState.ma120.toFixed(0)}
+      </div>
+    </div>`;
+  }
+  // 하락장 아님
+  return `<div style="background:var(--grn3);border:1px solid var(--grn2);border-left:3px solid var(--grn);border-radius:14px;padding:14px;margin-bottom:12px;font-family:var(--sans)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span style="font-size:13px;color:var(--grn);letter-spacing:1px;font-weight:700">✓ 하락장 아닙니다</span>
       <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">${nasdaqState.lastDate}${nasdaqState.stale?' (캐시)':''}</span>
     </div>
-    <div style="font-size:12px;color:var(--t2);line-height:1.7">
-      나스닥이 120일 이평선 아래로 약 2개월(44 거래일) 연속 종가 마감했습니다.<br>배팅 비중 줄이고 보수적으로 운영하세요.
+    <div style="font-size:11px;color:var(--t3);font-family:var(--mono);line-height:1.7">
+      종가 ${nasdaqState.lastClose.toFixed(0)} · MA120 ${nasdaqState.ma120.toFixed(0)}<br>
+      120일선 2달 연속 종가 하회 — <b style="color:var(--grn)">미충족</b>
     </div>
-    <div style="font-size:10px;color:var(--t3);margin-top:7px;font-family:var(--mono)">
-      종가 ${nasdaqState.lastClose.toFixed(0)} &lt; MA120 ${nasdaqState.ma120.toFixed(0)}
-    </div>
-    <div style="font-size:11px;color:var(--t3);text-align:center;padding-top:10px;cursor:pointer" onclick="dismissBearAlert()">오늘은 닫기</div>
   </div>`;
 }
 
-function dismissBearAlert(){
-  if(nasdaqState){
-    localStorage.setItem('bear_alert_dismissed_'+nasdaqState.lastDate,'1');
-    renderLog();
+// 매매기록 탭 맨 밑 — 오타니 가능/아님 항상 표시
+function renderOtaniBox(){
+  if(!nasdaqState){
+    return `<div style="background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:14px;margin-top:14px;font-family:var(--sans);text-align:center">
+      <span style="font-size:11px;color:var(--t3)">📡 나스닥 데이터 로딩 중...</span>
+    </div>`;
   }
+  if(nasdaqState.below60){
+    return `<div style="background:var(--red3);border:1px solid var(--red2);border-left:3px solid var(--red);border-radius:14px;padding:16px;margin-top:14px;font-family:var(--sans);text-align:center">
+      <div style="font-size:18px;color:var(--red);font-weight:700;letter-spacing:1.5px;margin-bottom:6px">⚡ 오타니 가능</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.6">나스닥 종가가 60일 이평선 아래입니다.</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:6px;font-family:var(--mono)">종가 ${nasdaqState.lastClose.toFixed(0)} &lt; MA60 ${nasdaqState.ma60.toFixed(0)} · ${nasdaqState.lastDate}${nasdaqState.stale?' (캐시)':''}</div>
+    </div>`;
+  }
+  return `<div style="background:var(--grn3);border:1px solid var(--grn2);border-left:3px solid var(--grn);border-radius:14px;padding:16px;margin-top:14px;font-family:var(--sans);text-align:center">
+    <div style="font-size:18px;color:var(--grn);font-weight:700;letter-spacing:1.5px;margin-bottom:6px">✓ 오타니 아님</div>
+    <div style="font-size:11px;color:var(--t2);line-height:1.6">나스닥 종가가 60일 이평선 위입니다.</div>
+    <div style="font-size:10px;color:var(--t3);margin-top:6px;font-family:var(--mono)">종가 ${nasdaqState.lastClose.toFixed(0)} ≥ MA60 ${nasdaqState.ma60.toFixed(0)} · ${nasdaqState.lastDate}${nasdaqState.stale?' (캐시)':''}</div>
+  </div>`;
 }
 
+// 하락장 진입 시 브라우저 푸시 알림 (하루 1회)
 function maybeFireBearNotification(){
   if(!nasdaqState||!nasdaqState.bearMarket)return;
   if(!('Notification' in window)||Notification.permission!=='granted')return;
